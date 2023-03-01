@@ -2,6 +2,19 @@ import pygame
 import sys
 from pygame.math import Vector2
 import random
+import numpy as np
+
+
+#reset
+#reward
+#play(action) ->direction
+#game_iteration
+#is_collision
+class Direction():
+    RIGHT =Vector2(1,0)
+    LEFT=Vector2(-1,0)
+    UP=Vector2(0,-1)
+    DOWN=Vector2(0,1)
 
 class Garbage:
     def __init__(self):
@@ -17,11 +30,12 @@ class Garbage:
         self.y = random.randint(0,cell_number -1)
         self.pos = Vector2(self.x,self.y)
 
-class Snake:
+class SnakeAI:
     def __init__(self):
         self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10)]
-        self.direction = Vector2(0,0)
+        self.direction = Vector2(1,0)
         self.new_block = False
+        self.frame_iteration = 0
 
         self.head_up = pygame.image.load('img/head_up.png').convert_alpha()
         self.head_down = pygame.image.load('img/head_down.png').convert_alpha()
@@ -94,7 +108,7 @@ class Snake:
         elif head_relation == Vector2(0,1):
             self.head = self.head_up
 
-    def move_snake(self):
+    def move_snake(self, action):
         if self.new_block == True:
             body_copy = self.body[:]
             body_copy.insert(0,body_copy[0]+ self.direction)
@@ -114,15 +128,23 @@ class Snake:
     def reset(self):
         self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10)]
         self.direction = Vector2(0,0)
+        
 
 class main:
     def __init__(self):
-        self.snake = Snake()
+        self.snake= SnakeAI()
         self.garbage = Garbage()
+        self.reward =0
+        
+        self.alive = True
+        #well
+        
     
-    def update(self):
-        self.snake.move_snake()
+    def update(self,action):
+        self.snake.move_snake(action)
         self.check_collision()
+        if self.snake.frame_iteration > 100*len(self.snake.body):
+            self.reward = -10
         self.check_fail()
     
     def draw_elements(self):
@@ -136,10 +158,47 @@ class main:
             self.garbage.randomize()
             self.snake.add_block()
             self.snake.play_crunch_sound()
+            self.reward = 10
         for block in self.snake.body[1:]:
             if block == self.garbage.pos:
                 self.garbage.randomize()
+            
 
+    def play_step(self, action):
+        self.snake.frame_iteration += 1
+
+        #[straight,right,left]
+        #draw all the elements
+        clock_wise = [Vector2(1,0),Vector2(0,1),Vector2(-1,0),Vector2(0,-1)]
+        idx = clock_wise.index(main_game.snake.direction)
+
+        if np.array_equal(action, [1,0,0]):
+            new_dir = clock_wise[idx]
+        elif np.array_equal(action, [0,1,0]):
+            next_idx = (idx+1)%4
+            new_dir = clock_wise[next_idx]
+        else:
+            next_idx = (idx -1)%4
+            new_dir = clock_wise[next_idx]
+        main_game.snake.direction = new_dir
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == SCREEN_UPDATE:
+                main_game.update(action=[1,0,0])
+            # if event.type == pygame.KEYDOWN:
+            #     if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+            #         main_game.snake.direction = Vector2(0,-1)    
+            #     if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+            #         main_game.snake.direction = Vector2(0,1)
+            #     if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+            #         main_game.snake.direction = Vector2(1,0)
+            #     if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+            #         main_game.snake.direction = Vector2(-1,0)   
+        return self.reward,self.alive,(len(self.snake.body) - 3)
+    
     def draw_score(self):
         score_text = str(len(self.snake.body) - 3)
         score_surface = game_font.render(score_text,True,(56,74,12))
@@ -154,11 +213,18 @@ class main:
         screen.blit(apple,apple_rect)
         pygame.draw.rect(screen, (56,74,12),bg_rect,2)
 
-    def check_fail(self):
-        if not 0 <= self.snake.body[0].x < cell_number or not 0 <= self.snake.body[0].y < cell_number:
+    def check_fail(self, pt = None):
+        if pt is None:
+            pt = self.snake.body[0]
+
+        if not 0 <= pt.x < cell_number or not 0 <= pt.y < cell_number:
+            self.alive = False
+            self.reward = -10
             self.game_over()
         for block in self.snake.body[1:]:
-            if block == self.snake.body[0]:
+            if block == pt:
+                self.reward = -10
+                self.alive = False
                 self.game_over()
 
     def draw_grass(self):
@@ -176,6 +242,7 @@ class main:
                         pygame.draw.rect(screen,grass_colour,grass_rect)
             
     def game_over(self):
+        self.alive = True
         self.snake.reset()
 
 pygame.mixer.pre_init(44100,-16,2,512)
@@ -190,25 +257,11 @@ main_game = main()
 
 SCREEN_UPDATE = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE,150)
-
+action = [1,0,0]
 while True:
-    #draw all the elements
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        if event.type == SCREEN_UPDATE:
-            main_game.update()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
-                main_game.snake.direction = Vector2(0,-1)    
-            if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
-                main_game.snake.direction = Vector2(0,1)
-            if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
-                main_game.snake.direction = Vector2(1,0)
-            if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
-                main_game.snake.direction = Vector2(-1,0)            
+    main_game.play_step(action)      
     screen.fill((175,215,70))
     main_game.draw_elements()
     pygame.display.update()
     clock.tick(60)
+    print(main_game.snake.frame_iteration)
