@@ -5,6 +5,7 @@ from collections import deque
 from modified_snake_for_agent import main, Direction, Point
 from model import Linear_QNet, QTrainer
 from helper import plot
+from pygame.math import Vector2
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
@@ -20,19 +21,26 @@ class Agent:
         self.trainer = QTrainer(self.model, lr=LR,gamma=self.gamma)
         #TODO:model, trainer
 
+    def check_vector_equal(self,vec,vec2):
+        if vec.x == vec2[0] and vec.y == vec2[1]:
+            return True
+        return False
 
     def get_state(self,game):
         head = game.snake.body[0]
-        point_l = Point(head.x - 20, head.y)
-        point_r = Point(head.x + 20, head.y)
-        point_u = Point(head.x, head.y - 20)
-        point_d = Point(head.x, head.y + 20)
-        
-        dir_l = game.snake.direction == Direction.LEFT
-        dir_r = game.snake.direction == Direction.RIGHT
-        dir_u = game.snake.direction == Direction.UP
-        dir_d = game.snake.direction == Direction.DOWN
+        # print(head)
+        point_l = Vector2(head.x - 1, head.y)
+        point_r = Vector2(head.x + 1, head.y)
+        point_u = Vector2(head.x, head.y - 1)
+        point_d = Vector2(head.x, head.y + 1)
+        print(point_r)
+        # print(game.snake.direction)
+        #is not working
 
+        dir_l = self.check_vector_equal(game.snake.direction,[-1,0])
+        dir_r = self.check_vector_equal(game.snake.direction,[1,0])
+        dir_u = self.check_vector_equal(game.snake.direction,[0,-1])
+        dir_d = self.check_vector_equal(game.snake.direction,[0,1])
         state = [
             # Danger straight
             (dir_r and game.check_fail(point_r)) or 
@@ -59,16 +67,16 @@ class Agent:
             dir_d,
             
             # Food location 
-            game.food.x < game.head.x,  # food left
-            game.food.x > game.head.x,  # food right
-            game.food.y < game.head.y,  # food up
-            game.food.y > game.head.y  # food down
+            game.garbage.x < game.snake.body[0].x,  # food left
+            game.garbage.x > game.snake.body[0].x,  # food right
+            game.garbage.y < game.snake.body[0].y,  # food up
+            game.garbage.y > game.snake.body[0].y  # food down
             ]
-
+        # print(state)
         return np.array(state, dtype=int)
 
     def remember(self,state,action,reward,nextstate,done):
-        self.memory.append(state,action,reward,nextstate,done) #pop left if max mem
+        self.memory.append((state,action,reward,nextstate,done)) #pop left if max mem
 
     def train_long_memory(self):
         if len(self.memory) > BATCH_SIZE:
@@ -80,7 +88,7 @@ class Agent:
         self.trainer.train_step(states,actions,rewards,nextstates,dones) 
 
     def train_short_memory(self,state,action,reward,nextstate,done):
-        self.trainer.train_step((state,action,reward,nextstate,done)) #store as tuple
+        self.trainer.train_step(state,action,reward,nextstate,done) #store as tuple
 
     def get_action(self,state):
         #random shit in the beginning (exploration you know)
@@ -88,11 +96,13 @@ class Agent:
         final_move = [0,0,0]
         if random.randint(0,200) < self.eplison:
             move = random.randint(0,2)
+            print('random',move)
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype = torch.float)
             prediction = self.model(state0)
             move = torch.argmax(prediction).item()
+            print('chose from thing', move)
             final_move[move] = 1
         return final_move
 
@@ -111,19 +121,24 @@ def train():
         final_move = agent.get_action(state_old)
 
         #perform move and get new state
-        reward, done,score = game.play_step(final_move)
-        print(reward,done,score)
+        reward, done, score = game.play_step(final_move)
+        done = not done
+        # print(reward)
+        # print(reward,done,score)
         
         state_new = agent.get_state(game)
-
+        # print(game.snake.frame_iteration)
+        # print(done)
         #train short memory
         agent.train_short_memory(state_old,final_move,reward,state_new,done)
 
         #remember shit
         agent.remember(state_old,final_move,reward,state_new,done)
         
-        if not done:
+        if done:
             #train long memory,plot result
+            
+            # print(game.snake.frame_iteration)
             game.game_over()
             agent.n_games+=1
             agent.train_long_memory()

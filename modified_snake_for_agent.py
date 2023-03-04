@@ -7,6 +7,17 @@ import random
 import numpy as np
 
 
+pygame.mixer.pre_init(44100,-16,2,512)
+pygame.init()
+cell_size =40 
+cell_number = 20
+
+
+screen = pygame.display.set_mode((cell_number*cell_size,cell_number*cell_size))
+clock = pygame.time.Clock()
+SCREEN_UPDATE = pygame.USEREVENT
+pygame.time.set_timer(SCREEN_UPDATE,150)
+
 #reset
 #reward
 #game_iteration
@@ -132,7 +143,7 @@ class SnakeAI:
 
     def reset(self):
         self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10)]
-        self.direction = Vector2(0,0)
+        self.direction = Vector2(1,0)
         
 
 class main:
@@ -152,9 +163,8 @@ class main:
         self.snake.move_snake(action)
         self.check_collision()
         if self.snake.frame_iteration > 100*len(self.snake.body):
-            self.reward = -10
-        self.check_fail()
-    
+            self.reward += -10
+        
     def draw_elements(self):
         self.draw_grass()
         self.garbage.draw_garbage()
@@ -179,8 +189,7 @@ class main:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == SCREEN_UPDATE:
-                self.update(action)
+        
           #draw all the elements
         clock_wise = [Vector2(1,0),Vector2(0,1),Vector2(-1,0),Vector2(0,-1)]
         idx = clock_wise.index(self.snake.direction)
@@ -195,25 +204,17 @@ class main:
             new_dir = clock_wise[next_idx]
         self.snake.direction = new_dir
 
+        self.reward = 0
+        # pygame.time.delay(150)
+        self.update(action)
+        if self.check_fail()== True:
+            self.reward += -10
+            self.alive = False
 
-        
-        #[straight,right,left]
-      
-
-       
-        
-       
-            
-        
-            # if event.type == pygame.KEYDOWN:
-            #     if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
-            #         main_game.snake.direction = Vector2(0,-1)    
-            #     if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
-            #         main_game.snake.direction = Vector2(0,1)
-            #     if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
-            #         main_game.snake.direction = Vector2(1,0)
-            #     if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
-            #         main_game.snake.direction = Vector2(-1,0)   
+        screen.fill((175,215,70))
+        self.draw_elements()
+        pygame.display.update()
+        clock.tick(60)
         return self.reward,self.alive,(len(self.snake.body) - 3)
     
     def draw_score(self):
@@ -235,15 +236,11 @@ class main:
             pt = self.snake.body[0]
 
         if not 0 <= pt.x < cell_number or not 0 <= pt.y < cell_number:
-            self.alive = False
-            self.reward = -10
-            self.game_over()
-        for block in self.snake.body[1:]:
-            if block == pt:
-                self.reward = -10
-                self.alive = False
-                self.game_over()
-
+            return True
+        if pt in self.snake.body[1:]:
+            return True
+        return False
+    
     def draw_grass(self):
         grass_colour=(167,209,61)
         for row in range(cell_number):
@@ -260,6 +257,8 @@ class main:
             
     def game_over(self):
         self.alive = True
+        self.snake.frame_iteration = 0
+        self.reward = 0
         self.snake.reset()
 
 
@@ -270,17 +269,8 @@ class main:
             self.draw_elements()
             pygame.display.update()
             clock.tick(60)
-            print(self.snake.frame_iteration)
 
 
-pygame.mixer.pre_init(44100,-16,2,512)
-pygame.init()
-cell_size =40 
-cell_number = 20
-screen = pygame.display.set_mode((cell_number*cell_size,cell_number*cell_size))
-clock = pygame.time.Clock()
-SCREEN_UPDATE = pygame.USEREVENT
-pygame.time.set_timer(SCREEN_UPDATE,150)
-game = main()
-game.run([1,0,0])
+# game = main()
+# game.run([1,0,0])
 
