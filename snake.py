@@ -154,12 +154,15 @@ class main:
         screen.blit(apple,apple_rect)
         pygame.draw.rect(screen, (56,74,12),bg_rect,2)
 
-    def check_fail(self):
-        if not 0 <= self.snake.body[0].x < cell_number or not 0 <= self.snake.body[0].y < cell_number:
-            self.game_over()
-        for block in self.snake.body[1:]:
-            if block == self.snake.body[0]:
-                self.game_over()
+    def check_fail(self, pt = None):
+        if pt is None:
+            pt = self.snake.body[0]
+
+        if not 0 <= pt.x < cell_number or not 0 <= pt.y < cell_number:
+            return True , 'Screen'
+        if pt in self.snake.body[1:]:
+            return True , 'Tail'
+        return False, None
 
     def draw_grass(self):
         grass_colour=(167,209,61)
