@@ -1,29 +1,34 @@
 import pygame
 import sys
 from pygame.math import Vector2
+from collections import namedtuple
+from enum import Enum
 import random
 import numpy as np
 
 
 #reset
 #reward
-#play(action) ->direction
 #game_iteration
 #is_collision
-class Direction():
+class Direction(Enum):
     RIGHT =Vector2(1,0)
     LEFT=Vector2(-1,0)
     UP=Vector2(0,-1)
     DOWN=Vector2(0,1)
 
+Point = namedtuple('Point', 'x, y')
+
 class Garbage:
     def __init__(self):
         self.randomize()
         
+        self.apple = pygame.image.load('img/apple.png').convert_alpha()  
+
     def draw_garbage(self):
         #create rectangle
         garbage_rect = pygame.Rect(self.pos.x*cell_size,self.pos.y*cell_size,cell_size,cell_size)
-        screen.blit(apple,garbage_rect)
+        screen.blit(self.apple,garbage_rect)
         # pygame.draw.rect(screen,(126,166,114),garbage_rect)
     def randomize(self):
         self.x = random.randint(0,cell_number -1)
@@ -139,6 +144,9 @@ class main:
         self.alive = True
         #well
         
+        self.game_font = pygame.font.Font('Font/PoetsenOne-Regular.ttf',25)
+
+        
     
     def update(self,action):
         self.snake.move_snake(action)
@@ -166,11 +174,16 @@ class main:
 
     def play_step(self, action):
         self.snake.frame_iteration += 1
-
-        #[straight,right,left]
-        #draw all the elements
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == SCREEN_UPDATE:
+                self.update(action)
+          #draw all the elements
         clock_wise = [Vector2(1,0),Vector2(0,1),Vector2(-1,0),Vector2(0,-1)]
-        idx = clock_wise.index(main_game.snake.direction)
+        idx = clock_wise.index(self.snake.direction)
 
         if np.array_equal(action, [1,0,0]):
             new_dir = clock_wise[idx]
@@ -180,14 +193,18 @@ class main:
         else:
             next_idx = (idx -1)%4
             new_dir = clock_wise[next_idx]
-        main_game.snake.direction = new_dir
+        self.snake.direction = new_dir
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == SCREEN_UPDATE:
-                main_game.update(action=[1,0,0])
+
+        
+        #[straight,right,left]
+      
+
+       
+        
+       
+            
+        
             # if event.type == pygame.KEYDOWN:
             #     if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
             #         main_game.snake.direction = Vector2(0,-1)    
@@ -201,16 +218,16 @@ class main:
     
     def draw_score(self):
         score_text = str(len(self.snake.body) - 3)
-        score_surface = game_font.render(score_text,True,(56,74,12))
+        score_surface = self.game_font.render(score_text,True,(56,74,12))
         score_x = cell_number* cell_size - 60
         score_y = cell_number*cell_size - 40
         score_rect = score_surface.get_rect(center = (score_x,score_y)) 
-        apple_rect = apple.get_rect(midright = (score_rect.left, score_rect.centery))
+        apple_rect = self.garbage.apple.get_rect(midright = (score_rect.left, score_rect.centery))
         bg_rect = pygame.Rect(apple_rect.left,apple_rect.top,apple_rect.width+score_rect.width+ 10,apple_rect.height)
 
         pygame.draw.rect(screen,(167,209,61),bg_rect)
         screen.blit(score_surface,score_rect)
-        screen.blit(apple,apple_rect)
+        screen.blit(self.garbage.apple,apple_rect)
         pygame.draw.rect(screen, (56,74,12),bg_rect,2)
 
     def check_fail(self, pt = None):
@@ -245,23 +262,25 @@ class main:
         self.alive = True
         self.snake.reset()
 
+
+    def run(self,action):
+        while True:
+            self.play_step(action)  
+            screen.fill((175,215,70))
+            self.draw_elements()
+            pygame.display.update()
+            clock.tick(60)
+            print(self.snake.frame_iteration)
+
+
 pygame.mixer.pre_init(44100,-16,2,512)
 pygame.init()
 cell_size =40 
 cell_number = 20
 screen = pygame.display.set_mode((cell_number*cell_size,cell_number*cell_size))
 clock = pygame.time.Clock()
-apple = pygame.image.load('img/apple.png').convert_alpha() 
-game_font = pygame.font.Font('Font/PoetsenOne-Regular.ttf',25)
-main_game = main()
-
 SCREEN_UPDATE = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE,150)
-action = [1,0,0]
-while True:
-    main_game.play_step(action)      
-    screen.fill((175,215,70))
-    main_game.draw_elements()
-    pygame.display.update()
-    clock.tick(60)
-    print(main_game.snake.frame_iteration)
+game = main()
+game.run([1,0,0])
+
