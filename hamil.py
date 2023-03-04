@@ -1,4 +1,3 @@
-from snake import main
 import pygame as pg
 import sys
 from random import randint
@@ -6,34 +5,191 @@ import time
 import os
 from collections import deque
 
-def gameplay(game,cycle):
-    position =(game.snake.body[0].x,game.snake.body[0].y)
+# Used to modify the window size, values must be a multiple of 40
+screen_width = 600
+screen_height = 400
 
+# Controls where the window appears on the screen
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0, 30)
+
+
+class Fruit(object):
+
+    def __init__(self):
+
+        self.color = pg.Color(139, 0, 0)
+        self.width = 20
+        self.height = 20
+        self.fruit = None
+        self.radius = 10
+
+        # The initial position of the fruit is placed randomly on the screen
+        self.x = randint(0, screen_width / self.width - 1) * self.width
+        self.y = randint(0, screen_height / self.height - 1) * self.height
+
+    # Prints the fruit on the screen
+    def draw_fruit(self, surface):
+
+        self.fruit = pg.Rect(self.x, self.y, self.width, self.height)
+        pg.draw.circle(surface, self.color, (self.x + self.radius, self.y + self.radius), self.radius)
+
+    # Checks whether the snake's head collides with the fruit
+    def fruit_collision(self, head):
+
+        return self.fruit.colliderect(head)
+
+    # Finds a new location for a fruit after a collision occurs
+    def fruit_position(self):
+
+        flag = True
+        while flag:
+
+            # The position of the fruit is chosen randomly
+            self.x = randint(0, screen_width/self.width - 1) * self.width
+            self.y = randint(0, screen_height/self.height - 1) * self.height
+
+            # Checks whether the new fruit location is already occupied by the snake's body
+            if snake.empty_space(self.x, self.y):
+                break
+
+
+class Snake(object):
+
+    def __init__(self):
+
+        self.x = screen_width//2
+        self.y = screen_height//2
+        self.width = 20
+        self.height = 20
+        self.head = None
+        self.speed = 20
+        self.direction = None
+        self.body = deque()
+        self.segment = deque()
+        self.head_color = pg.Color(220, 20, 60)
+        self.body_color = pg.Color(57, 255, 20)
+        self.outline_color = pg.Color(0, 0, 0)
+
+    # Draws the snake's head and body segments on the screen
+    def draw_snake(self, surface):
+
+        if len(self.body) > 0:
+            for unit in self.segment:
+                pg.draw.rect(surface, self.body_color, unit)
+                pg.draw.rect(surface, self.outline_color, unit, 1)
+        self.head = pg.Rect(self.x, self.y, self.width, self.height)
+        pg.draw.rect(surface, self.head_color, self.head)
+        pg.draw.rect(surface, self.outline_color, self.head, 1)
+
+    # Adds a segment to the snake if a collision between the head and fruit occurs
+    def snake_size(self):
+
+        if len(self.body) != 0:
+            index = len(self.body) - 1
+            x = self.body[index][0]
+            y = self.body[index][1]
+            self.body.append([x, y])
+            self.segment.append(pg.Rect(x, y, self.width, self.height))
+
+    # Ends the game in the case where the snake collides with the boundaries or the head collides with a body segment
+    def boundary_collision(self):
+
+        # If the head of the snake collides with a body segment the function returns True
+        # The head collides with the first 2 body segments, count prevents it from registering as a collision
+        count = 0
+        for part in self.segment:
+            if self.head.colliderect(part) and count > 2:
+                return True
+            count += 1
+
+        # Checks if the head of the snake lies outside of the boundaries of the window
+        if self.y < 0 or self.y > screen_height - self.height or self.x < 0 or self.x > screen_width - self.width:
+            return True
+
+    # Allows the snake to move and follow the coordinates of the hamiltonian cycle
+    def movement(self):
+
+        if self.direction == 'up':
+            self.y -= self.speed
+        if self.direction == 'down':
+            self.y += self.speed
+        if self.direction == 'right':
+            self.x += self.speed
+        if self.direction == 'left':
+            self.x -= self.speed
+
+        # Movement is simulated by removing the tail block and adding a block that overlaps with the snake head
+        if len(self.body) > 0:
+            self.body.pop()
+            self.segment.pop()
+        self.body.appendleft([self.x, self.y])
+        self.segment.appendleft(pg.Rect(self.x, self.y, self.width, self.height))
+
+    # Changes the orientation of movement
+    # A snake moving in one direction cannot move in the opposite direction as it would collide with its body
+    def change_direction(self, direction):
+
+        if direction == 'up' and self.direction != 'down':
+            self.direction = 'up'
+        if direction == 'down' and self.direction != 'up':
+            self.direction = 'down'
+        if direction == 'right' and self.direction != 'left':
+            self.direction = 'right'
+        if direction == 'left' and self.direction != 'right':
+            self.direction = 'left'
+
+    # Checks whether a new fruit position conflicts with a body segment of the snake
+    def empty_space(self, x_coordinate, y_coordinate):
+
+        if [x_coordinate, y_coordinate] not in self.body:
+            return True
+        else:
+            return False
+
+
+# Controls the graphics
+# Controls the movement of the snake to follow the hamiltonian cycle
+def gameplay(fruit, snake, cycle):
+
+    # Identifies the starting position of the snake
+    position = (int(snake.x/20), int(snake.y/20))
+
+    # Identifies the position in the hamiltonian cycle at which the snake begins
     index = cycle.index(position)
+
     length = len(cycle)
     run = True
 
+    # Loop simulates the movement of the snake and controls game mechanics
     while run:
+
         # Controls the frame rate of the graphics to make movement smooth and modify the speed of the simulation
         clock = pg.time.Clock()
         clock.tick(50)
+
+        # If the user clicks the exit button the program closes
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()
                 sys.exit()
-        game.draw_elements()
 
+        # Movement is simulated by making screen black and redrawing the snake and fruit
+        window.fill(pg.Color(0, 0, 0))
+        fruit.draw_fruit(window)
+        snake.draw_snake(window)
+
+        # Finds the direction for the snake's next movement according to the calculated hamiltonian cycle
         if index + 1 < length and cycle[index+1] == (position[0] + 1, position[1]):
-            game.snake.change_direction('right')
+            snake.change_direction('right')
             position = (position[0] + 1, position[1])
         elif index + 1 < length and cycle[index+1] == (position[0] - 1, position[1]):
-            game.snake.change_direction('left')
+            snake.change_direction('left')
             position = (position[0] - 1, position[1])
         elif index + 1 < length and cycle[index+1] == (position[0], position[1] + 1):
-            game.snake.change_direction('down')
+            snake.change_direction('down')
             position = (position[0], position[1] + 1)
         elif index + 1 < length and cycle[index+1] == (position[0], position[1] - 1):
-            game.snake.change_direction('up')
+            snake.change_direction('up')
             position = (position[0], position[1] - 1)
 
         # Takes care of boundary case where the next index of the cycle does not exist
@@ -41,33 +197,47 @@ def gameplay(game,cycle):
         # Otherwise the index is incremented by 1
         if index == length - 1:
             if cycle[0] == (position[0] + 1, position[1]):
-                game.snake.change_direction('right')
+                snake.change_direction('right')
                 position = (position[0] + 1, position[1])
             elif cycle[0] == (position[0] - 1, position[1]):
-                game.snake.change_direction('left')
+                snake.change_direction('left')
                 position = (position[0] - 1, position[1])
             elif cycle[0] == (position[0], position[1] + 1):
-                game.snake.change_direction('down')
+                snake.change_direction('down')
                 position = (position[0], position[1] + 1)
             elif cycle[0] == (position[0], position[1] - 1):
-                game.snake.change_direction('up')
+                snake.change_direction('up')
                 position = (position[0], position[1] - 1)
             index = 0
         else:
             index += 1
 
         # Changes the coordinates of the snake's position
-        game.snake()
+        snake.movement()
 
         # If the snake's head collides with a fruit
-        game.check_collision()
+        if fruit.fruit_collision(snake.head):
+
+            # A new fruit is generated and the size of the snake is increased by 1
+            if len(snake.body) < length:
+                fruit.fruit_position()
+                snake.snake_size()
+
+            # Once the snake fills up the entire grid there are no more positions for the fruit
+            # The game ends and closes
+            else:
+                time.sleep(3)
+                pg.quit()
+                sys.exit()
+
         # Ends the game if the snakes collides with itself or the boundaries
-        game.checkfail()
-           
+        if snake.boundary_collision():
+            time.sleep(3)
+            pg.quit()
+            sys.exit()
 
         # Draws all elements on the window
         pg.display.update()
-
 
 
 # Uses prim's algorithm to generate a randomized maze using randomized edge weights
@@ -387,8 +557,10 @@ def path_generator(graph, cells):
     return path
 
 
-circuit = prim_maze_generator(20,20)
+circuit = prim_maze_generator(int(screen_height/40), int(screen_width/40))
 pg.init()
+window = pg.display.set_mode((screen_width, screen_height))
 pg.display.set_caption('Snake Solver')
-game = main()
-gameplay(game, circuit)
+fruit = Fruit()
+snake = Snake()
+gameplay(fruit, snake, circuit)
