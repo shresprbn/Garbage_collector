@@ -154,6 +154,20 @@ class main:
         screen.blit(apple,apple_rect)
         pygame.draw.rect(screen, (56,74,12),bg_rect,2)
 
+    def change_direction(self,direction):
+        if direction == 'up' and self.snake.direction != Vector2(0,1):
+            self.snake.direction = Vector2(0,-1)
+            self.snake.move_snake()
+        if direction == 'down' and self.snake.direction != Vector2(0,-1):
+            self.snake.direction = Vector2(0,1)
+            self.snake.move_snake()
+        if direction == 'right' and self.snake.direction != Vector2(-1,0):
+            self.snake.direction = Vector2(1,0)
+            self.snake.move_snake()
+        if direction == 'left' and self.snake.direction != Vector2(1,0):
+            self.snake.direction = Vector2(-1,0)
+            self.snake.move_snake()
+
     def check_fail(self, pt = None):
         if pt is None:
             pt = self.snake.body[0]
@@ -202,15 +216,15 @@ while True:
             sys.exit()
         if event.type == SCREEN_UPDATE:
             main_game.update()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
-                main_game.snake.direction = Vector2(0,-1)    
-            if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
-                main_game.snake.direction = Vector2(0,1)
-            if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
-                main_game.snake.direction = Vector2(1,0)
-            if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
-                main_game.snake.direction = Vector2(-1,0)            
+        # if event.type == pygame.KEYDOWN:
+        #     if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+        #         main_game.snake.direction = Vector2(0,-1)    
+        #     if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+        #         main_game.snake.direction = Vector2(0,1)
+        #     if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+        #         main_game.snake.direction = Vector2(1,0)
+        #     if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+        #         main_game.snake.direction = Vector2(-1,0)            
     screen.fill((175,215,70))
     main_game.draw_elements()
     pygame.display.update()
