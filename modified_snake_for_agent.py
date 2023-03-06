@@ -163,7 +163,7 @@ class main:
         self.snake.move_snake(action)
         self.check_collision()
         if self.snake.frame_iteration > 100*len(self.snake.body):
-            self.reward += -10
+            self.reward = -10
         
     def draw_elements(self):
         self.draw_grass()
@@ -208,7 +208,7 @@ class main:
         # pygame.time.delay(150)
         self.update(action)
         if self.check_fail()== True:
-            self.reward += -10
+            self.reward = -10
             self.alive = False
 
         screen.fill((175,215,70))
