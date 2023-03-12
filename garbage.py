@@ -34,7 +34,7 @@ class Garbage:
     def __init__(self):
         self.randomize()
         
-        self.apple = pygame.image.load('img/apple.png').convert_alpha()  
+        self.apple = pygame.image.load('img/garbage.png').convert_alpha()  
 
     def draw_garbage(self):
         #create rectangle
@@ -52,6 +52,7 @@ class SnakeAI:
         self.direction = Vector2(1,0)
         self.new_block = False
         self.frame_iteration = 0
+        self.score = 0
 
         self.head_up = pygame.image.load('img/truck_head_up.png').convert_alpha()
         self.head_down = pygame.image.load('img/truck_head_down.png').convert_alpha()
@@ -142,8 +143,9 @@ class SnakeAI:
         self.new_block = True
 
     def reset(self):
-        self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10)]
+        self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10),Vector2(2,10)]
         self.direction = Vector2(1,0)
+        self.score = 0
         
 
 class main:
@@ -162,7 +164,7 @@ class main:
     def update(self,action):
         self.snake.move_snake(action)
         self.check_collision()
-        if self.snake.frame_iteration > 100*len(self.snake.body):
+        if self.snake.frame_iteration > 100*(self.snake.score+3):
             self.reward = -10
         
     def draw_elements(self):
@@ -174,8 +176,9 @@ class main:
     def check_collision(self):
         if self.garbage.pos == self.snake.body[0]:
             self.garbage.randomize()
-            self.snake.add_block()
+            # self.snake.add_block()
             self.snake.play_crunch_sound()
+            self.snake.score +=1
             self.reward = 10
         for block in self.snake.body[1:]:
             if block == self.garbage.pos:
@@ -205,20 +208,20 @@ class main:
         self.snake.direction = new_dir
 
         self.reward = 0
-        pygame.time.delay(150)
+        # pygame.time.delay(150)
         self.update(action)
         if self.check_fail()== True:
             self.reward = -10
             self.alive = False
 
-        screen.fill((175,215,70))
+        screen.fill((192,192,192))
         self.draw_elements()
         pygame.display.update()
         clock.tick(60)
-        return self.reward,self.alive,(len(self.snake.body) - 3)
+        return self.reward,self.alive,self.snake.score
     
     def draw_score(self):
-        score_text = str(len(self.snake.body) - 3)
+        score_text = str(self.snake.score)
         score_surface = self.game_font.render(score_text,True,(56,74,12))
         score_x = cell_number* cell_size - 60
         score_y = cell_number*cell_size - 40
@@ -242,7 +245,7 @@ class main:
         return False
     
     def draw_grass(self):
-        grass_colour=(167,209,61)
+        grass_colour=(169,169,169)
         for row in range(cell_number):
             if row%2 == 0:     
                 for col in range(cell_number):
@@ -265,7 +268,7 @@ class main:
     def run(self,action):
         while True:
             self.play_step(action)  
-            screen.fill((175,215,70))
+            screen.fill((192,192,192))
             self.draw_elements()
             pygame.display.update()
             clock.tick(60)
