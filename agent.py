@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 from collections import deque
-from modified_snake_for_agent import main, Direction, Point
+from garbage import main, Direction, Point
 from model import Linear_QNet, QTrainer
 from helper import plot
 from pygame.math import Vector2
